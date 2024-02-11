@@ -1,7 +1,6 @@
 #version 100
 
 attribute vec2 aPos;
-attribute vec4 aColor;
 attribute vec2 aTexCoord;
 
 uniform int aPointSize;
@@ -14,6 +13,6 @@ void main(void)
 {
     gl_Position = vec4(aPos.x / aViewport.x * 2.0 - 1.0, 1.0 - aPos.y / aViewport.y * 2.0, 0.0, 1.0);
 	texCoord = aTexCoord;
-	color = aColor;
+	color = vec4(1.0, 0.0, 0.0, 1.0);
 	gl_PointSize  = float(aPointSize);
 }

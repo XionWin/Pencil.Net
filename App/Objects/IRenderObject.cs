@@ -2,7 +2,7 @@
 
 namespace App.Objects
 {
-    internal interface IRenderObject
+    internal interface IRenderObject: IDisposable
     {
         public int VAO { get; }
 
@@ -11,6 +11,5 @@ namespace App.Objects
         public int EBO { get; }
         public void OnLoad(Shader shader);
         public void OnRenderFrame(Shader shader);
-        public void OnUnload();
     }
 }

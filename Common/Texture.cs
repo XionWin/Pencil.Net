@@ -60,8 +60,7 @@ namespace Common
 
             this.Size = new Vector2(width, height);
 
-            GL.TexImage2D(TextureTarget2d.Texture2D, 0, pixelInternalFormat,
-                width, height, 0, pixelFormat, PixelType.UnsignedByte, data);
+            GL.TexImage2D(TextureTarget2d.Texture2D, 0, pixelInternalFormat, width, height, 0, pixelFormat, PixelType.UnsignedByte, data);
 
             // Now that our texture is loaded, we can set a few settings to affect how the image appears on rendering.
 
