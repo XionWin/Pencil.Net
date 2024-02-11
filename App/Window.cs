@@ -2,11 +2,8 @@
 using Common;
 using Extension;
 using OpenTK.Graphics.ES20;
-using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.GraphicsLibraryFramework;
-using System;
-using System.Collections;
 using System.Drawing;
 
 namespace App
@@ -37,27 +34,14 @@ namespace App
 
             GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2D, _textures["bg"]?.Id ?? 0);
-            var subData = new byte[] {
-               0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,
-               0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
-               0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,
-               0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
-               0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,
-               0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
-               0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,
-               0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
-            };
-
-            var x1 = 0;
-            var y1 = 0;
-            var w = 8;
-            var h = 8;
+            var x1 = 500;
+            var y1 = 200;
+            var w = 1;
+            var h = 4;
+            var subData = Enumerable.Repeat((byte)0x00, w * h * 4).ToArray();
 
             GL.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
-            //GL.PixelStore(PixelStoreParameter.UnpackSkipPixels, x);
-            //GL.PixelStore(PixelStoreParameter.UnpackSkipRows, y);
-            GL.TexSubImage2D(TextureTarget2d.Texture2D, 0, x1, y1, w, h, PixelFormat.Alpha, PixelType.UnsignedByte, subData);
-
+            GL.TexSubImage2D(TextureTarget2d.Texture2D, 0, x1, y1, w, h, PixelFormat.Rgba, PixelType.UnsignedByte, subData);
 
             _renderObjects.AddRange(
                 [
@@ -82,20 +66,11 @@ namespace App
             base.OnRenderFrame(args);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             GL.Viewport(0, 0, this.Size.X, this.Size.Y);
-
-            // Enable Alpha
-            GL.Enable(EnableCap.Blend);
-            GL.BlendFunc(BlendingFactorSrc.SrcAlpha, BlendingFactorDest.OneMinusSrcAlpha);
-            // Active texture
-            this.Shader.Uniform1("aTexture", 0);
-            this.Shader.Uniform1("aPointSize", 10);
-            GL.BindTexture(TextureTarget.Texture2D, _textures["bg"]?.Id ?? 0);
             
             foreach (var renderObject in _renderObjects)
             {
                 renderObject.OnRenderFrame(this.Shader);
             }
-
 
             SwapBuffers();
         }

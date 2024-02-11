@@ -55,7 +55,7 @@ namespace App.Objects
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, this.EBO);
             GL.BufferData(BufferTarget.ElementArrayBuffer, Indices.Length * sizeof(uint), Indices, BufferUsageHint.StaticDraw);
 
-            SetParameters(shader);
+            shader.EnableAttribs(Vertex2.AttribLocations);
         }
         
         public virtual void SetVertexes(Shader shader)
@@ -76,17 +76,14 @@ namespace App.Objects
             ];
         }
 
-        public virtual void SetParameters(Shader shader)
-        {
-            shader.EnableAttribs(Vertex2.AttribLocations);
-        }
-
         public virtual void OnRenderFrame(Shader shader)
         {
             // Bind the VAO
             GL.Oes.BindVertexArray(this.VAO);
 
-            this.SetFrameParameters(shader);
+            shader.Uniform1("aTexture", 0);
+            shader.Uniform1("aPointSize", 10);
+            GL.BindTexture(TextureTarget.Texture2D, this.Texture?.Id ?? 0);
 
             // Enable Alpha
             GL.Enable(EnableCap.Blend);
@@ -97,17 +94,6 @@ namespace App.Objects
             shader.Uniform1("aMode", 1);
             GL.DrawElements(PrimitiveType.Points, this.Indices.Length, DrawElementsType.UnsignedInt, 0);
             shader.Uniform1("aMode", 0);
-        }
-
-        public virtual void SetFrameParameters(Shader shader)
-        {
-            //shader.UniformMatrix3("aTransform", this.Matrix);
-            //shader.Uniform2("aCenter", new Vector2(this.Center.X, this.Center.Y));
-
-            //shader.Uniform2("aTexOffset", new Vector2(0, 0));
-            shader.Uniform1("aTexture", 0);
-            shader.Uniform1("aPointSize", 10);
-            GL.BindTexture(TextureTarget.Texture2D, this.Texture?.Id ?? 0);
         }
 
         public void Dispose()
