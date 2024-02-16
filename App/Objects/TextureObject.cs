@@ -5,7 +5,7 @@ using System.Drawing;
 
 namespace App.Objects
 {
-    internal class RenderObject : IRenderObject
+    internal class TextureObject : IRenderObject
     {
         public int VAO { get; set; }
 
@@ -14,22 +14,21 @@ namespace App.Objects
         public int EBO { get; set; }
 
         public Rectangle Rectangle { get; set; }
-        public Vector4 Color { get; set; }
-        public Matrix3 Matrix { get; set; } = Matrix3.Identity;
+        public Texture Texture { get; init; }
+        public RectangleF TexCoord { get; set; }
 
         protected Vertex2[]? _vertices = null;
         public Vertex2[] Vertices => this._vertices ?? throw new ArgumentException();
 
         protected uint[]? _indices = null;
         public uint[] Indices => this._indices ?? throw new ArgumentException();
-        public Point Center => new Point(this.Rectangle.X + this.Rectangle.Width / 2, this.Rectangle.Y + this.Rectangle.Height / 2);
 
-        public Texture Texture { get; init; }
-        public RectangleF TexCoord { get; set; }
+        public Matrix3 Matrix { get; set; } = Matrix3.Identity;
+        public Point Center => new Point(this.Rectangle.X + this.Rectangle.Width / 2, this.Rectangle.Y + this.Rectangle.Height / 2);
 
         private static RectangleF DEFAULT_TEXCOORD = new RectangleF(0, 0, 1, 1);
 
-        public RenderObject(Rectangle rectangle, Texture texture, RectangleF? texCoord = null)
+        public TextureObject(Rectangle rectangle, Texture texture, RectangleF? texCoord = null)
         {
             this.Rectangle = rectangle;
             this.Texture = texture;

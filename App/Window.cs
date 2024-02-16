@@ -23,6 +23,8 @@ namespace App
         {
             base.OnLoad(); 
 
+            VG.Main.Test();
+
             GL.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
             _textures.Add(
                 "bg",  new Texture(TextureUnit.Texture0, TextureMinFilter.Nearest).With(x => x.LoadImage(@"Resources/Images/bg.png"))
@@ -45,9 +47,9 @@ namespace App
 
             _renderObjects.AddRange(
                 [
-                    new RenderObject(new Rectangle(0, 0, 800, 480), _textures["bg"]),
-                    new RenderObject(new Rectangle(100, 100, 100, 100), _textures["bg"]),
-                    new RenderObject(new Rectangle(100, 300, 256, 256), _textures["container"]),
+                    new TextureObject(new Rectangle(0, 0, 800, 480), _textures["bg"]),
+                    new TextureObject(new Rectangle(100, 100, 100, 100), _textures["bg"]),
+                    new TextureObject(new Rectangle(400, 100, 256, 256), _textures["container"]),
                 ]
             );
 
