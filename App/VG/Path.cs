@@ -16,8 +16,10 @@ public class Path
     private PathPoint[]? _points = null;
     public PathPoint[] Points => this._points is PathPoint[] points ? points : throw new Exception("No point in this path");
 
-    public bool IsClosed { get; set; }
+    public int Count => this.Points?.Length ?? 0;
     public int BevelCount { get; set; }
+    public int VertexCount { get; set; }
+    public bool IsClosed { get; set; }
     public Winding Winding { get; set; }
     public bool IsConvex { get; set; }
     public Rect Bounds { get; private set; }
@@ -40,6 +42,29 @@ public class Path
         this.UpdateBounds();
 
         this.Expand(context, pathType);
+
+        // Calculate max vertex usage.
+        var nCap = context.CurveDivs();
+        var lineJoin = context.GetState().LineJoin;
+        var lineCap = context.GetState().LineCap;
+        var cverts = 0;
+        if (lineJoin == LineJoin.Round)
+            cverts += (this.Count + this.BevelCount * (nCap + 2) + 1) * 2; // plus one for loop
+        else
+            cverts += (this.Count + this.BevelCount * 5 + 1) * 2; // plus one for loop
+        if (this.IsClosed is false)
+        {
+            // space for caps
+            if (lineCap == LineCap.Round)
+            {
+                cverts += (nCap * 2 + 2) * 2;
+            }
+            else
+            {
+                cverts += (3 + 3) * 2;
+            }
+        }
+        this.VertexCount = cverts;
     }
 
     // [TODO] Need update turly bounds when primitive generated
@@ -160,7 +185,6 @@ public static class FinalizedPathExtension
         strokePaint.InnerColor.A *= state.alpha;
         strokePaint.OuterColor.A *= state.alpha;
 
-        var nCap = context.CurveDivs();
         path.CalculateJoins(context);
 
     }
@@ -221,7 +245,7 @@ public static class FinalizedPathExtension
                 }
             }
 
-            if (point.Flags.Contains(PointFlags.Bevel & PointFlags.InnerBevel))
+            if (point.Flags.Contains(PointFlags.Bevel | PointFlags.InnerBevel))
                 path.BevelCount++;
 
             lastPoint = point;

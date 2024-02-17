@@ -66,7 +66,7 @@ public class Context
         }
         if(this._paths.Peek() is Path path)
         {
-            path.AddCommand(command);
+            path.AddCommand(this.Transfrom(command));
         }
         else
         {
@@ -95,7 +95,7 @@ public static class ContextExtension
     internal static float GetedgeAntiAliasWidth(this Context context) => 
         (context.GetState().StrokeWidth + context.FringeWidth) / 2;
 
-    internal static float CurveDivs(this Context context)
+    internal static int CurveDivs(this Context context)
     {
         var aaWidth = context.GetedgeAntiAliasWidth();
         float da = (float)Math.Acos(aaWidth / (aaWidth + context.TessTol)) * 2.0f;
