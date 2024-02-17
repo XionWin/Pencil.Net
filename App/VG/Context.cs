@@ -66,7 +66,7 @@ public class Context
         }
         if(this._paths.Peek() is Path path)
         {
-            path.AddCommand(command, this.DistTol);
+            path.AddCommand(command);
         }
         else
         {
@@ -76,7 +76,10 @@ public class Context
 
     public void Stroke()
     {
-        this.Expand();
+        foreach (var path in this.Paths)
+        {
+            path.Stroke(this, PathType.Stroke);
+        }
 
     }
 }
@@ -87,14 +90,6 @@ public static class ContextExtension
     {
         command.Transfrom(context.GetState().Transform);
         return command;
-    }
-
-    internal static void Expand(this Context context)
-    {
-        foreach (var path in context.Paths)
-        {
-            path.Expand(context, PathType.Stroke);
-        }
     }
 
     internal static float GetedgeAntiAliasWidth(this Context context) => 

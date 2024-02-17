@@ -1,37 +1,44 @@
 namespace App.VG;
 
-public class FinalizableList<T>
+public class LockableList<T>
 {
     private List<T> _values = new List<T>();
 
-    private T[]? _valueCache = null;
-    public T[] Values => _valueCache is null ? this._values.ToArray() : this._valueCache;
+    private T[]? _valuesCache = null;
+    private T[] _lockedValues => this._valuesCache is null ? this._valuesCache = this._values.ToArray() : this._valuesCache;
+    public IEnumerable<T> Values => IsLocked ? this._values : this._lockedValues;
     public int Count => this._values.Count();
-    public bool IsFinalized { get; internal set; }
+    public bool IsLocked { get; internal set; }
 
     public void Add(T vlaue)
     {
-        if(this.IsFinalized)
+        if(this.IsLocked)
         {
-            throw new Exception("Path is finalized");
+            throw new Exception("List is locked");
         }
         this._values.Add(vlaue);
-        this._valueCache = null;
+        this._valuesCache = null;
     }
 
     public void Clear()
     {
-        if(this.IsFinalized)
+        if(this.IsLocked)
         {
-            throw new Exception("Path is finalized");
+            throw new Exception("List is locked");
         }
         this._values.Clear();
-        this._valueCache = null;
+        this._valuesCache = null;
+    }
+
+    public void Reverse()
+    {
+        this._values.Reverse();
+        this._valuesCache = null;
     }
 
     public void FinalizeList()
     {
-        this.IsFinalized = true;
+        this.IsLocked = true;
         this._values.ToArray();
     }
 }

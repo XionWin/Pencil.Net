@@ -1,6 +1,5 @@
 using System.Drawing;
-using System.Net.NetworkInformation;
-using System.Runtime.InteropServices.Marshalling;
+using System.Linq;
 
 namespace App.VG;
 
@@ -12,97 +11,134 @@ public enum PathType
 
 public class Path
 {
-    private List<PathPoint> _points = new List<PathPoint>();
+    private List<Command> _commands = new List<Command>();
+    public List<Command> Commands => this._commands;
+    private PathPoint[]? _points = null;
+    public PathPoint[] Points => this._points is PathPoint[] points ? points : throw new Exception("No point in this path");
 
-    private PathPoint[]? _pointCache = null;
-    public PathPoint[] Points => _pointCache is null ? this._points.ToArray() : this._pointCache;
-    public int Count => this._points.Count();
-    public int First { get; set; }
     public bool IsClosed { get; set; }
     public int BevelCount { get; set; }
     public Winding Winding { get; set; }
     public bool IsConvex { get; set; }
-    public Rect Bounds { get; private set; } = new Rect();
-    public bool IsFinalized { get; internal set; }
+    public Rect Bounds { get; private set; }
+    public bool IsFinalized { get; set; }
 
-    public void AddPoint(PathPoint point)
+    public void AddCommand(Command command)
     {
         if(this.IsFinalized)
         {
-            throw new Exception("Path is finalized");
+            throw new Exception("Can't add command into a finalized path");
         }
-        this._points.Add(point);
-        this.UpdateBounds(point);
-        this._pointCache = null;
+        this.Commands.Add(command);
     }
 
-    public PathPoint? GetFirstPoint() => this._points.FirstOrDefault() is PathPoint point ? point : null;
-    public PathPoint? GetLastPoint() => this._points.LastOrDefault() is PathPoint point ? point : null;
-
-    public void ReversePoints()
+    public void Stroke(Context context, PathType pathType)
     {
-        this._points.Reverse();
-        this._pointCache = null;
+        // Finalize path
+        this.IsFinalized = true;
+        this._points = this.FinalizePath(context.DistTol);
+        this.UpdateBounds();
+
+        this.Expand(context, pathType);
     }
 
-    private void UpdateBounds(PathPoint point)
+    // [TODO] Need update turly bounds when primitive generated
+    private void UpdateBounds()
     {
-        var lastBounds = this.Bounds;
+        var minX = this.Points.Min(x => x.X);
+        var maxX = this.Points.Max(x => x.X);
+        var minY = this.Points.Min(x => x.Y);
+        var maxY = this.Points.Max(x => x.Y);
         this.Bounds = new Rect (
-            Math.Min(lastBounds.Left, point.X),
-            Math.Min(lastBounds.Top, point.Y),
-            Math.Max(lastBounds.Right, point.X),
-            Math.Max(lastBounds.Bottom, point.Y)
+            minX,
+            minY,
+            maxX,
+            maxY
         );
     }
-
 }
 
-public static class PathExtension
+public static class FinalizedPathExtension
 {
-    internal static void AddCommand(this Path path, Command command, float distTol)
-    {
-        switch (command.CommandType)
+    public static PathPoint[] FinalizePath(this Path path, float distTol) =>
+        path.Commands.SelectMany(x => x.ToPathPoints()).ToList()
+        .Optimize(distTol)
+        .EnforceWinding(path.Winding);
+
+    private static IEnumerable<PathPoint> ToPathPoints(this Command command) =>
+        command.CommandType switch
         {
-            case CommandType.MoveTo:
-            case CommandType.LineTo:
-                path.AddCommandPoints(command.Points, PointFlags.Corner, distTol);
-                break;
-            default:
-                throw new NotImplementedException();
+            var type when type is CommandType.MoveTo || type is CommandType.LineTo => 
+                command.Points.Select(x => new PathPoint(x.X, x.Y, PointFlags.Corner)),
+            _ => throw new NotImplementedException()
+        };
+
+    internal static PathPoint[] EnforceWinding(this List<PathPoint> points, Winding winding)
+    {
+
+        if(points.Area() is float area)
+        {
+            if((winding is Winding.CCW && area < 0) || winding is Winding.CW && area > 0)
+            {
+                points.Reverse();
+            }
         }
+
+        for (int i = 0; i < points.Count - 1; i++)
+        {
+            var current = points[i];
+            var next = points[i + 1];
+            current.UpdateDelta(next.X - current.X, next.Y - current.Y);
+        }
+
+        var last = points.Last();
+        var first = points.First();
+        last.UpdateDelta(first.X - last.X, first.Y - last.Y);
+
+        return points.ToArray();
+    }
+    
+    public static List<PathPoint> Optimize(this List<PathPoint> points, float distTol)
+    {
+        for (int i = 1; i < points.Count; i++)
+        {
+            var current = points[i];
+            var last = points[i - 1];
+            if(last.Distance(current) < distTol)
+            {
+                last.Flags |= current.Flags;
+                points.Remove(current);
+            }
+        }
+        return points;
     }
 
-    internal static void AddCommandPoints(this Path path, CommandPoint[] points, PointFlags pointFlags, float distTol)
+    private static float? Area(this List<PathPoint> points)
     {
-        foreach (var point in points)
+        var area = 0f;
+        if(points.Count > 2)
         {
-            path.AddCommandPoint(point, pointFlags, distTol);
-        }
-    }
-
-
-    internal static void AddCommandPoint(this Path path, CommandPoint point, PointFlags pointFlags, float distTol)
-    {
-        if(path.GetLastPoint() is PathPoint lastPoint)
-        {
-            if(lastPoint.Distance(point.X, point.Y) >= distTol)
+            for (int i = 2; i < points.Count; i++)
             {
-                var currentPoint = new PathPoint(point.X, point.Y, pointFlags);
-                path.AddPoint(currentPoint);
+                var a = points[0];
+                var b = points[i - 1];
+                var c = points[i];
+
+                float abx = b.X - a.X;
+                float aby = b.Y - a.Y;
+                float acx = c.X - a.X;
+                float acy = c.Y - a.Y;
+                area += (acx * aby - abx * acy) / 2;
             }
-            else
-            {
-                lastPoint.Flags |= pointFlags;
-            }
+            return area;
         }
         else
         {
-            path.AddPoint(new PathPoint(point.X, point.Y, pointFlags));
+            return null;
         }
     }
 
-    internal static void Expand(this Path path, Context context, PathType pathType)
+    public static void Expand(this Path path, Context context, PathType pathType)
     {
         var state = context.GetState();
         var scale = state.GetAverageScale();
@@ -131,15 +167,12 @@ public static class PathExtension
 
     private static void CalculateJoins(this Path path, Context context)
     {
-        path.IsFinalized = true;
+        var points = path.Points;
+
         var leftCount = 0;
 
-        //Enforce winding
-        path.EnforceWinding();
-
-
-        var lastPoint = path.GetLastPoint() is PathPoint lastPointTemp ? lastPointTemp : throw new Exception("The last point is null");
-        foreach (var point in path.Points)
+        var lastPoint = points.LastOrDefault() is PathPoint lastPointTemp ? lastPointTemp : throw new Exception("The last point is null");
+        foreach (var point in points)
         {
             var dmx = (lastPoint.Dy + point.Dy) / 2f;
             var dmy = (-lastPoint.Dx - point.Dx) / 2f;  
@@ -193,56 +226,8 @@ public static class PathExtension
 
             lastPoint = point;
         }
-        path.IsConvex = leftCount == path.Points.Count();
+        path.IsConvex = leftCount == points.Length;
 
-    }
-
-    internal static void EnforceWinding(this Path path)
-    {
-        if(path.Area() is float area)
-        {
-            if((path.Winding is Winding.CCW && area < 0) || path.Winding is Winding.CW && area > 0)
-            {
-                path.ReversePoints();
-            }
-        }
-
-        for (int i = 0; i < path.Points.Length - 1; i++)
-        {
-            var current = path.Points[i];
-            var next = path.Points[i + 1];
-            current.UpdateDelta(next.X - current.X, next.Y - current.Y);
-        }
-
-        var last = path.Points.Last();
-        var first = path.Points.First();
-        last.UpdateDelta(first.X - last.X, first.Y - last.Y);
-    }
-
-    internal static float? Area(this Path path)
-    {
-        var area = 0f;
-        var points = path.Points;
-        if(path.Count > 2)
-        {
-            for (int i = 2; i < points.Length; i++)
-            {
-                var a = points[0];
-                var b = points[i - 1];
-                var c = points[i];
-
-                float abx = b.X - a.X;
-                float aby = b.Y - a.Y;
-                float acx = c.X - a.X;
-                float acy = c.Y - a.Y;
-                area += (acx * aby - abx * acy) / 2;
-            }
-            return area;
-        }
-        else
-        {
-            return null;
-        }
     }
 
 
